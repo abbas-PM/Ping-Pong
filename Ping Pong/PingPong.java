@@ -1,0 +1,435 @@
+/************************************************************** 
+  * Abbas Peer Mohammed
+  * 
+  * 2020-11-10  
+  * 
+  * This is a simple pong game with a ball in the middle and two paddles on each side,
+  * Deflect the ball with your paddle,you score a point when the ball hitting your opponents wall.              
+  * First one to five points wins. 
+  **************************************************************************/
+import java.awt.*;
+import java.awt.event.*;
+import javax.swing.*;
+import java.awt.geom.*; 
+import java.util.*;
+
+public class PingPong extends JFrame implements ActionListener, KeyListener {
+  
+  //Creating the global variables:
+  
+  /*The canvas for the paddles, background color, and score*/
+  private DrawCanvas canvas;
+  
+  JFrame frame = new JFrame("Pong");/*The JFrame*/ 
+  JPanel panel = new JPanel(null);/*The panel for buttons*/
+  
+  JButton btnStart, btnExit;/*Start and exit buttons*/
+  
+  /*Dimensions of window*/
+  public static final int CANVAS_WIDTH = 800;
+  public static final int CANVAS_HEIGHT = 400;
+  
+  /*Paddle width and height*/
+  int PaddleWidth = 10; 
+  int PaddleHeight = 100; 
+  
+  /*Score of each player*/
+  int score = 0;
+  int score2 = 0; 
+  
+  /*Location for the ball*/
+  int x = 391; 
+  int y = 200; 
+  
+  /*Direction of ball*/
+  int directionX = 1; 
+  int directionY = 1; 
+  
+  /*Radius of ball*/
+  int radius = 20; 
+  
+  /*Locations for paddle 1*/
+  int paddleX = 0; 
+  int paddleY = 300; 
+  
+  /*Locations for paddle 2*/
+  int paddle2X = 790; 
+  int paddle2Y = 300; 
+  
+  /*Boolean value, used to start game*/
+  boolean bound = false;
+  /*Boolean value used to pause the game*/
+  boolean paused = false; 
+  
+  /*For moving both paddles at once*/
+  boolean up = false; 
+  boolean down = false; 
+  boolean Q = false; 
+  boolean Z = false; 
+  
+  /*The two paddles*/
+  private Rectangle2D.Double paddle; 
+  private Rectangle2D.Double paddle2;
+  
+  /*Ball*/
+  Ellipse2D.Double ball = new Ellipse2D.Double(x,y,radius,radius); 
+  
+  public PingPong() {
+    
+    /*Setting the panel size, and color to white*/
+    panel.setBackground(Color.WHITE);  
+    panel.setPreferredSize(new Dimension(50,50));
+    
+    /*Making the start button*/
+    btnStart = new JButton("Start/Restart");
+    panel.add(btnStart);/*Adding it to the panel*/
+    btnStart.addActionListener(this);/*Seeing what the Action Listener does if the button is clicked*/
+    btnStart.setBounds(200, 10, 150, 30);/*Setting where the button is*/
+    
+    /*Making the Exit button*/
+    btnExit = new JButton("Exit");
+    panel.add(btnExit);/*Adding it to the panel*/
+    btnExit.addActionListener(this);/*Seeing what the Action Listener does if the button is clicked*/
+    btnExit.setBounds(450, 10, 150, 30);/*Setting where the button is*/
+    
+    /*Creating a canvas and setting a specific size to it*/
+    canvas = new DrawCanvas();/*Most of the stuff added to the canvas is in the class DrawCanvas*/
+    canvas.setPreferredSize(new Dimension(CANVAS_WIDTH, CANVAS_HEIGHT));
+    this.setResizable(false);
+    
+    /*Adding the canvas and panel to the frame*/
+    frame.add(canvas, BorderLayout.CENTER);/*Set the canvas to the center*/
+    frame.add(panel, BorderLayout.SOUTH);/*Set the panel to the bottom*/
+    
+    /*Listens to the KeyListener*/
+    frame.addKeyListener(this);
+    
+    frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);/*Defualt close*/ 
+    frame.setResizable(false);/*Cant allow the window to change size*/ 
+    frame.setTitle("PONG");/*Title of frame*/
+    frame.pack();/*Pack the components*/           
+    frame.setVisible(true);/*Make it visible*/
+    frame.requestFocus(); 
+  }
+  
+  public boolean Instructions() {
+    
+    /*If game has not started*/
+    if(bound == false) {
+      return true;/*Then return true to print instructions*/ 
+    }
+    else {
+      return false;/*If the game has started, return false*/ 
+    }
+  }
+  
+  public void actionPerformed(ActionEvent e) {
+    
+    /*If the user hits the exit button*/
+    if(e.getSource() == btnExit) {
+      System.exit(0);/*Exit the game*/ 
+    }
+    
+    /*If the user hits the start button for the first time*/
+    else if(e.getSource() == btnStart && !bound) {
+      bound = true;/*Start the game by setting bound to true*/
+      updateScreen();
+    }
+    
+    /*If the user hits the start button in the middle of a match*/
+    else if(e.getSource() == btnStart && bound == true) {
+      paused = false;/*Set paused to false*/ 
+      reset();/*Reset everything*/ 
+      updateScreen(); 
+    }
+  }
+  
+  public void updateScreen() {
+    
+    /*Ball will not move if game is not started, and game is not paused*/
+    if(bound == true && paused == false) {
+      
+      /*If the ball hits the bottom of the window*/
+      if(ball.y > CANVAS_HEIGHT - 20) {
+        directionY = -1;/*Change the direction*/ 
+      }
+      
+      /*If the ball hits the right side of the window*/
+      else if(ball.x > CANVAS_WIDTH - 20) {
+        directionX = -1;/*Change the direction*/
+        score += 1;/*Add one point to Player one*/ 
+      }
+      
+      /*If the ball hits the top of the window*/
+      else if(ball.y < 0) {
+        
+        directionY = 1;/*Change the direction*/   
+      }
+      
+      /*The the ball hits the left side*/
+      else if(ball.x < 0) {
+        directionX = 1;/*Change the direction*/ 
+        score2 += 1;/*Add a point to Player two*/  
+      }
+      
+      /*Test the intersection between ball and paddle*/
+      if(testIntersection(ball, paddle) == true) {
+        directionX = 1;/*Change the direction*/  
+      }
+      
+      /*Test the intersection between ball and paddle2*/
+      if(testIntersection(ball, paddle2) == true) {
+        directionX = -1;/*Change the direction*/  
+      }
+      
+      /*Add the speed and direction to x and y*/
+      ball.x += 5 * directionX;
+      ball.y += 5 * directionY; 
+      delay(17);/*Delay ball*/
+      
+      /*Moving the paddle a certain way if a certain button is pushed*/
+      if(up == true && paddle2Y > 0) {
+        paddle2Y = paddle2Y - 5;/*Move the paddle*/
+      }
+      
+      if(down == true && paddle2Y < CANVAS_HEIGHT - 100) {
+        paddle2Y = paddle2Y + 5;/*Move the paddle*/
+      }
+      
+      if(Q == true && paddleY > 0) {
+        paddleY = paddleY - 5;/*Move the paddle*/ 
+      }
+      
+      if(Z == true && paddleY < CANVAS_HEIGHT - 100) {
+        paddleY = paddleY + 5;/*Move the paddle*/ 
+      }
+    }
+    canvas.repaint();
+    frame.requestFocus();
+  }
+  
+  public void reset() {
+    
+    /*Reset the location of ball*/
+    ball.x = 391; 
+    ball.y = 200; 
+    
+    /*Reset location of paddle 1*/
+    paddleX = 0; 
+    paddleY = 300; 
+    
+    /*Reset location of paddle 2*/
+    paddle2X = 790; 
+    paddle2Y = 300; 
+    
+    /*Reset the scores*/
+    score = 0; 
+    score2 = 0; 
+    
+    canvas.repaint();
+  }
+  
+  public void keyPressed(KeyEvent evt) {
+    
+    /*Changing key input to c*/
+    int c = evt.getKeyCode(); 
+    
+    /*Paddles will not move if game is not started, and game is not paused*/
+    if(bound == true && paused == false) {
+      
+      /*If c = UP button*/
+      if (c == KeyEvent.VK_UP) {
+        up = true;
+      }
+      
+      /*If c = DOWN button*/
+      if (c == KeyEvent.VK_DOWN) {
+        down = true; 
+      }
+      /*If c = Q button*/
+      if(c == KeyEvent.VK_Q) { 
+        Q = true; 
+      } 
+      /*Checks to see if c = Z button*/
+      if(c == KeyEvent.VK_Z) {
+        Z = true; 
+      }
+      canvas.repaint(); 
+    }  
+  }
+  
+  public void keyReleased(KeyEvent evt) {
+    
+    /*Change key input to c*/
+    int c = evt.getKeyCode(); 
+    
+    /*Checks to see if the game has started*/
+    if(bound == true) {
+      
+      /*If the player inputs ENTER button*/
+      if(c == KeyEvent.VK_ENTER) {
+        
+        /*Checks to see if the game is in play*/
+        if(paused == false) {
+          paused = true;/*If it is, pause the game*/
+          canvas.repaint(); 
+        }
+        
+        /*If its already paused*/
+        else if(paused == true) {
+          paused = false;/*Start the game*/ 
+          canvas.repaint(); 
+        }
+      }
+    }
+    
+    if(bound == true && paused == false) {
+      /*If c = UP button*/
+      if (c == KeyEvent.VK_UP) {
+        up = false;
+      }
+      
+      /*If c = DOWN button*/
+      if (c == KeyEvent.VK_DOWN) {
+        down = false; 
+      }
+      /*If c = Q button*/
+      if(c == KeyEvent.VK_Q) { 
+        Q = false; 
+      } 
+      /*Checks to see if c = Z button*/
+      if(c == KeyEvent.VK_Z) {
+        Z = false; 
+      }
+    }
+  }
+  public void keyTyped(KeyEvent evt) {}
+  
+  public int winCondition() {
+    
+    /*Checking to see if player one's score is equal to five*/
+    if(score == 5) {
+      paused = true;/*Pause the game. Note: will not say game paused*/ 
+      return 1;/*If it is return 1*/  
+    }
+    
+    /*Checking to see if player two's score is equal to five*/
+    else if(score2 == 5) {
+      paused = true;/*Pause the game. Note: will not say game paused*/ 
+      return 2;/*If it is return 2*/  
+    }
+    return 0; 
+  }
+  
+  public static boolean testIntersection(Shape shapeA, Shape shapeB) {
+    
+    /*Collistion Detection*/
+    Area areaA = new Area(shapeA);
+    areaA.intersect(new Area(shapeB));
+    return !areaA.isEmpty();
+  }
+  
+  class DrawCanvas extends JPanel {
+    
+    public void paintComponent(Graphics g) {
+      
+      super.paintComponent(g);
+      Graphics2D g2d = (Graphics2D)g;
+      
+      /*Set background color to black*/
+      setBackground(Color.BLACK);
+      
+      /*Setting the paddles dimensions and its locations*/
+      paddle = new Rectangle2D.Double(paddleX, paddleY, PaddleWidth, PaddleHeight);
+      paddle2 = new Rectangle2D.Double(paddle2X, paddle2Y, PaddleWidth, PaddleHeight);
+      
+      /*Setting the color to the paddles*/
+      g2d.setPaint(Color.MAGENTA);  
+      g2d.fill(paddle);
+      g2d.setPaint(Color.GREEN);
+      g2d.fill(paddle2);  
+      
+      g2d.setPaint(Color.YELLOW);
+      /*Displaying the score for player #1*/
+      g2d.setFont(new Font("ARIEL", Font.PLAIN, 70));
+      g2d.drawString(score + " ", 250,100); 
+      
+      /*Displaying the score for player #2*/
+      g2d.setFont(new Font("ARIEL", Font.PLAIN, 70));
+      g2d.drawString(score2 + " ", 500,100); 
+      
+      /*Drawing a line in the middle*/
+      g2d.setPaint(Color.WHITE);
+      g2d.drawLine(400,0,400,400);
+      
+      /*Drawing the oval, giving its size, set location and color*/
+      g2d.setPaint(Color.YELLOW);
+      g2d.fill(ball);
+      
+      /*If player one wins*/
+      if(winCondition() == 1) {
+        g2d.setPaint(Color.MAGENTA);
+        g2d.setFont(new Font("IMPACT", Font.PLAIN, 50));
+        g2d.drawString("PLAYER ONE WINS!", 210,200);    
+      }
+      
+      /*If player two wins*/
+      else if(winCondition() == 2) {
+        g2d.setPaint(Color.GREEN);
+        g2d.setFont(new Font("IMPACT", Font.PLAIN, 50));
+        g2d.drawString("PLAYER TWO WINS!", 200,200);
+      }
+      
+      /*If the player pauses the game*/
+      if(paused == true && (score != 5 && score2 != 5)) {
+        g2d.setPaint(Color.WHITE);
+        g2d.setFont(new Font("ARIEL", Font.PLAIN, 25));
+        g2d.drawString("Game paused!", 0,20);   
+      }
+      
+      /*Showing to see if the game hasnt started*/
+      if(Instructions() == true) {
+        
+        /*Setting a box to make sure instructions are readable*/
+        g2d.setPaint(Color.WHITE);
+        g2d.fillRect(130,120,610,230);
+        
+        /*If the game has not started, display the instructions*/
+        g2d.setPaint(Color.GRAY);
+        g2d.setFont(new Font("Times New Roman", Font.PLAIN, 20));
+        g2d.drawString("Instuctions:",150,150);
+        g2d.drawString("This is a simple pong game, player one is on the left, and",150,175);
+        g2d.drawString("player two is on the right. The ball keeps bouncing back and forward.",150,195);
+        g2d.drawString("Make sure the ball dosent hit your side of the wall by hitting it with your",150,215);
+        g2d.drawString("paddle. If the ball hits your wall, your opponent gains a point. First to",150,235);
+        g2d.drawString("five points wins.",150,255);  
+        g2d.drawString("Controls:",150,295);
+        g2d.drawString("Player One - Q to go up, Z to go down.",150,315);
+        g2d.drawString("Player Two - UP arrow to go up, DOWN arrow to go down.",150,335);
+      }
+      updateScreen();
+    }
+  }
+  
+  public static void main(String[] args) { 
+    new PingPong(); 
+  }
+  
+  /*Delay method*/
+  public static void delay(int milli){
+    
+    try{
+      Thread.sleep(milli);
+    }
+    catch(Exception e){}
+  }
+}
+
+
+
+
+
+
+
+
+
